@@ -1,4 +1,4 @@
-local MAJOR, MINOR = 'KuiSpellList-1.0', 9
+local MAJOR, MINOR = 'KuiSpellList-1.0', 10
 local KuiSpellList = LibStub:NewLibrary(MAJOR, MINOR)
 local _
 
@@ -8,17 +8,157 @@ if not KuiSpellList then
 end
 
 local listeners = {}
-local whitelist = {
-    --[[ Important spells ----------------------------------------------------------
-    Target auras which the player needs to keep track of.
 
-    -- LEGEND --
-    gp = guaranteed passive
-    nd = no damage
-    td = tanking dot
-    ma = modifies another ability when active
-    ]]
-    DRUID = { -- 5.2 COMPLETE
+local system = {
+    -- system applied auras (PVP flags)
+    -- buffs
+    [23333] = true, -- Horde Flag
+    [23335] = true, -- Alliance Flag
+    [34976] = true, -- Netherstorm Flag
+    [140876] = true, -- alliance mine cart
+    [141210] = true, -- horde mine cart
+    -- debuffs
+    [112055] = true, -- Orb of power
+    [121164] = true, -- Orb of power
+    [121175] = true, -- Orb of power
+    [121177] = true, -- Orb of power
+}
+
+local cc = {
+    -- debuffs which may be important in PVP
+    DRUID = {
+        [99] = true, -- Incapacitating Roar
+        [339] = true, -- Entangling Roots
+        [5211] = true, -- mighty bash
+        [22570] = true, -- maim
+        [33786] = true, -- Cyclone
+        [78675] = true, -- solar beam silence
+        [102359] = true, -- Mass Entanglement
+    },
+    HUNTER = {
+        [1499] = true, -- Freezing Trap
+        [3355] = true,
+        [5116] = true, -- Concussive Shot
+        [19386] = true, -- Wyvern Sting
+        [24394] = true, -- Intimidation
+        [64803] = true, -- Entrapment
+        [117405] = true, -- binding shot
+        [117526] = true, -- Blinding Shot stun
+        [120761] = true, -- glaive toss slow
+        [121414] = true, -- glaive toss slow 2
+        [135299] = true, -- Ice Trap
+        [136634] = true, -- Narrow Escape
+    },
+    MAGE = {
+        [116] = true, -- frostbolt debuff
+        [118] = true, -- Polymorph
+        [122] = true, -- Frost Nova
+        [28271] = true, -- Polymorph
+        [28272] = true, -- Polymorph
+        [31589] = true, -- slow
+        [31661] = true, -- Dragon's Breath
+        [33395] = true, -- Freeze
+        [44572] = true, -- Deep Freeze
+        [61305] = true, -- Polymorph
+        [61721] = true, -- Polymorph
+        [61780] = true, -- Polymorph
+        [102051] = true, -- Frostjaw
+        [113724] = true, -- Ring of Frost
+        [157997] = true, -- Ice Nova
+        [126819] = true, -- Polymorph
+        [161353] = true, -- Polymorph
+        [161354] = true, -- Polymorph
+        [161355] = true, -- Polymorph
+        [161372] = true, -- Polymorph
+    },
+    DEATHKNIGHT = {
+        [45524] = true, -- chains of ice
+        [108194] = true, -- asphyxiate stun
+        [115000] = true, -- remorseless winter slow
+        [115001] = true, -- remorseless winter stun
+    },
+    MONK = {
+        [115078] = true, -- paralysis
+        [116095] = true, -- disable
+        [116330] = true, -- dizzying haze slow
+        [119381] = true, -- Leg Sweep
+        [119392] = true, -- Charging Ox Wave
+        [120086] = true, -- fists of fury stun
+        [123394] = true, -- Breath of Fire incapacitate
+    },
+    PALADIN = {
+        [853] = true, -- Hammer of Justice
+        [10326] = true, -- Turn Evil
+        [20066] = true, -- Repentance
+        [31935] = true,  -- avenger's shield silence
+        [105593] = true, -- Fist of Justice
+        [115750] = true, -- Blinding Light
+        [119072] = true, -- holy wrath stun
+    },
+    PRIEST = {
+        [605] = true, -- Dominate Mind
+        [8122] = true, -- Psychic Scream
+        [15487] = true, -- silence
+        [88625] = true, -- Holy Word: Chastise
+        [64044] = true, -- Psychic Horror
+        [114404] = true, -- void tendril root
+    },
+    ROGUE = {
+        [408] = true, -- Kidney Shot
+        [1776] = true, -- Gouge
+        [1833] = true, -- Cheap Shot
+        [2094] = true, -- Blind
+        [3409] = true,   -- crippling poison
+        [6770] = true, -- Sap
+        [88611] = true,  -- smoke bomb
+        [115196] = true, -- debilitating poison
+    },
+    SHAMAN = {
+        [3600] = true,   -- earthbind totem passive
+        [8056] = true,   -- frost shock slow
+        [51490] = true,  -- thunderstorm slow
+        [51514] = true, -- Hex
+        [63374] = true, -- Frozen Power
+        [63685] = true,  -- frost shock root
+        [64695] = true,   -- earthgrab totem root
+        [116947] = true,   -- earthgrab totem slow
+        [118905] = true, -- Static Charge
+    },
+    WARLOCK = {
+        [710] = true,  -- banish
+        [5484] = true, -- Howl of Terror
+        [5782] = true, -- Fear
+        [6789] = true, -- Mortal Coil
+        [30283] = true, -- Shadowfury
+        [118699] = true,
+        [111397] = true, -- blood fear
+        [171018] = true, -- meteor strike (abyssal stun)
+    },
+    WARRIOR = {
+        [1715] = true,   -- hamstring
+        [5246] = true,   -- Intimidating Shout
+        [7922] = true,   -- charge stun
+        [12323] = true,  -- piercing howl
+        [18498] = true,  -- gag order
+        [107566] = true, -- staggering shout
+        [107570] = true, -- Stormbolt
+        [132168] = true, -- shockwave stun
+    },
+    Racial = {
+        [28730] = true, -- arcane torrent
+        [25046] = true,
+        [50613] = true,
+        [69179] = true,
+        [80483] = true,
+        [129597] = true,
+        [20549] = true, -- war stomp
+        [107079] = true, -- quaking palm
+    },
+}
+
+local whitelist = {
+    -- auras which the player applies and needs to keep track of
+    DRUID = {
         [770] = true, -- faerie fire
         [1079] = true, -- rip
         [1822] = true, -- rake
@@ -31,12 +171,8 @@ local whitelist = {
         [164815] = true,
         [33745] = true, -- lacerate
 
-        [339] = true, -- entangling roots
         [6795] = true, -- growl
         [16914] = true, -- hurricane
-        [22570] = true, -- maim
-        [33786] = true, -- cyclone
-        [78675] = true, -- solar beam silence
 
         [1126] = true, -- mark of the wild
 
@@ -49,51 +185,24 @@ local whitelist = {
         -- talents
         [102351] = true, -- cenarion ward
         [102355] = true, -- faerie swarm
-        [102359] = true, -- mass entanglement
         [61391] = true, -- typhoon daze
-        [99] = true, -- disorienting roar
-        [5211] = true, -- mighty bash
     },
-    HUNTER = { -- 5.2 COMPLETE
+    HUNTER = {
         [1130] = true, -- hunter's mark
         [3674] = true, -- black arrow
         [53301] = true, -- explosive shot
         [118253] = true, -- serpent sting
 
-        [5116] = true, -- concussive shot
         [20736] = true, -- distracting shot
-        [24394] = true, -- intimidation
-        [64803] = true, -- entrapment
         [131894] = true, -- murder by way of crow
 
-        [3355] = true, -- freezing trap
         [13812] = true, -- explosive trap
-        [135299] = true, -- ice trap TODO isn't classed as caused by player
-
         [34477] = true, -- misdirection
-
-        -- talents
-        [136634] = true, -- narrow escape
-        [19386] = true, -- wyvern sting
-        [117405] = true, -- binding shot
-        [117526] = true, -- binding shot stun
-        [120761] = true, -- glaive toss slow
-        [121414] = true, -- glaive toss slow 2
     },
-    MAGE = { -- 5.2 COMPLETE
-        [116] = true, -- frostbolt debuff
+    MAGE = {
         [11366] = true, -- pyroblast
         [12654] = true, -- ignite
-        [31589] = true, -- slow
         [83853] = true, -- combustion
-
-        [118] = true, -- polymorph
-        [28271] = true, -- polymorph: turtle
-        [28272] = true, -- polymorph: pig
-        [61305] = true, -- polymorph: cat
-        [61721] = true, -- polymorph: rabbit
-        [61780] = true, -- polymorph: turkey
-        [44572] = true, -- deep freeze
 
         [1459] = true, -- arcane brilliance
 
@@ -103,35 +212,25 @@ local whitelist = {
         [44457] = true, -- living bomb
         [112948] = true, -- frost bomb
     },
-    DEATHKNIGHT = { -- 5.2 COMPLETE
+    DEATHKNIGHT = {
         [55095] = true, -- frost fever
         [55078] = true, -- blood plague
         [114866] = true, -- soul reaper
 
         [43265] = true, -- death and decay
-        [45524] = true, -- chains of ice
         [49560] = true, -- death grip taunt
         [50435] = true, -- chillblains
         [56222] = true, -- dark command
-        [108194] = true, -- asphyxiate stun
 
         [3714] = true, -- path of frost
         [57330] = true, -- horn of winter
-
-        -- talents
-        [115000] = true, -- remorseless winter slow
-        [115001] = true, -- remorseless winter stun
     },
-    WARRIOR = { -- 5.2 COMPLETE
+    WARRIOR = {
         [86346] = true,  -- colossus smash
 
         [355] = true,    -- taunt
         [772] = true,    -- rend
         [1160] = true,   -- demoralizing shout
-        [1715] = true,   -- hamstring
-        [5246] = true,   -- intimidating shout
-        [7922] = true,   -- charge stun
-        [18498] = true,  -- gag order
         [64382] = true,  -- shattering throw
         [115767] = true, -- deep wounds; td
 
@@ -140,15 +239,12 @@ local whitelist = {
         [6673] = true,   -- battle shout
 
         -- talents
-        [12323] = true,  -- piercing howl
-        [107566] = true, -- staggering shout
-        [132168] = true, -- shockwave debuff
         [114029] = true, -- safeguard
         [114030] = true, -- vigilance
         [113344] = true, -- bloodbath debuff
         [132169] = true, -- storm bolt debuff
     },
-    PALADIN = { -- 5.2 COMPLETE
+    PALADIN = {
         [114163] = true, -- eternal flame
 
         [20925] = { colour = {1,1,.3} }, -- sacred shield
@@ -172,14 +268,8 @@ local whitelist = {
         [1038] = true,   -- salvation
         [1022] = true,   -- protection
 
-        [853] = true,    -- hammer of justice
         [2812] = true,   -- denounce
-        [10326] = true,  -- turn evil
-        [20066] = true,  -- repentance
-        [31935] = true,  -- avenger's shield silence
         [62124] = true,  -- reckoning
-        [105593] = true, -- fist of justice
-        [119072] = true, -- holy wrath stun
 
         [114165] = true, -- holy prism
         [114916] = true, -- execution sentence dot
@@ -204,31 +294,16 @@ local whitelist = {
         [48181] = true,  -- haunt
         [80240] = true,  -- havoc
 
-        [710] = true,    -- banish
         [1098] = true,   -- enslave demon
-        [5782] = true,   -- fear
-        [118699] = true, -- fear (again)
-        [171018] = true, -- meteor strike (abyssal stun)
 
         -- metamorphosis:
         [603] = true,    -- doom
         [124915] = true, -- chaos wave
-
-        -- talents:
-        [5484] = true,   -- howl of terror
-        [111397] = true, -- blood fear
     },
-    SHAMAN = { -- 5.2 COMPLETE
+    SHAMAN = {
         [8050] = true,   -- flame shock
-        [8056] = true,   -- frost shock slow
-        [63685] = true,  -- frost shock root
-        [51490] = true,  -- thunderstorm slow
         [17364] = true,  -- stormstrike
         [61882] = true,  -- earthquake
-
-        [3600] = true,   -- earthbind totem passive
-        [64695] = true,   -- earthgrap totem root
-        [116947] = true,   -- earthgrap totem slow
 
         [546] = true,    -- water walking
         [974] = true,    -- earth shield
@@ -236,7 +311,7 @@ local whitelist = {
 
         [51514] = true,  -- hex
     },
-    PRIEST = { -- 5.2 COMPLETE
+    PRIEST = {
         [139] = true,    -- renew
         [6346] = true,   -- fear ward
         [33206] = true,  -- pain suppression
@@ -250,9 +325,7 @@ local whitelist = {
         [21562] = true,  -- power word: fortitude
 
         [2096] = true,   -- mind vision
-        [8122] = true,   -- psychic scream
         [9484] = true,   -- shackle undead
-        [64044] = true,  -- psychic horror
         [111759] = true, -- levitate
 
         [589] = true,    -- shadow word: pain
@@ -262,43 +335,29 @@ local whitelist = {
         [34914] = true,  -- vampiric touch
 
         -- talents:
-        [605] = true,    -- dominate mind
-        [114404] = true, -- void tendril root
         [129250] = true, -- power word: solace
         [155361] = true, -- void entropy
     },
-    ROGUE = { -- 5.2 COMPLETE
+    ROGUE = {
         [703] = true,    -- garrote
         [1943] = true,   -- rupture
         [79140] = true,  -- vendetta
         [84617] = true,  -- revealing strike
-        [89775] = true,  -- hemorrhage
         [122233] = true, -- crimson tempest
 
         [2818] = true,   -- deadly poison
-        [3409] = true,   -- crippling poison
-        [115196] = true, -- debilitating poison
         [8680] = true,   -- wound poison
 
-        [408] = true,    -- kidney shot
-        [1776] = true,   -- gouge
-        [1833] = true,   -- cheap shot
-        [2094] = true,   -- blind
-        [6770] = true,   -- sap
         [26679] = true,  -- deadly throw
-        [88611] = true,  -- smoke bomb
 
         [57934] = true,  -- tricks of the trade
 
         -- talents:
-        [112961] = true, -- leeching poison
         [137619] = true, -- marked for death
     },
-    MONK = { -- 5.2 COMPLETE
+    MONK = {
         [116189] = true, -- provoke taunt
-        [116330] = true, -- dizzying haze debuff
         [123725] = true, -- breath of fire
-        [120086] = true, -- fists of fury stun
         [122470] = true, -- touch of karma
         [128531] = true, -- blackout kick debuff
         [130320] = true, -- rising sun kick debuff
@@ -314,37 +373,10 @@ local whitelist = {
         [119611] = true, -- renewing mist
         [157681] = true, -- chi explosion hot
 
-        [116095] = true, -- disable
-        [115078] = true, -- paralysis
-
         -- talents:
         [116841] = true, -- tiger's lust
         [124081] = true, -- zen sphere
-        [119392] = true, -- charging ox wave
-        [119381] = true, -- leg sweep
     },
-
-    GlobalSelf = {
-        [28730] = true, -- arcane torrent
-        [25046] = true,
-        [50613] = true,
-        [69179] = true,
-        [80483] = true,
-        [129597] = true,
-        --[155145] = true, -- seems to not be implemented
-        [20549] = true, -- war stomp
-        [107079] = true, -- quaking palm
-    },
-
-    -- Important auras regardless of caster (cc, flags...) -------------------------
-    --[[
-    Global = {
-    -- PVP --
-    [34976] = true, -- Netherstorm Flag
-    [23335] = true, -- Alliance Flag
-    [23333] = true, -- Horde Flag
-    },
-    ]]
 }
 
 KuiSpellList.RegisterChanged = function(table, method)
@@ -361,11 +393,11 @@ KuiSpellList.WhitelistChanged = function()
     end
 end
 
-KuiSpellList.AppendGlobalSpells = function(toList)
-    for spellid,_ in pairs(whitelist.GlobalSelf) do
-        toList[spellid] = true
+KuiSpellList.AppendSpells = function(from, to)
+    for spellid,val in pairs(from) do
+        to[spellid] = val
     end
-    return toList
+    return to
 end
 
 KuiSpellList.GetDefaultSpells = function(class,onlyClass)
@@ -373,23 +405,24 @@ KuiSpellList.GetDefaultSpells = function(class,onlyClass)
     local list = {}
 
     -- return a copy of the list rather than a reference
-    for spellid,_ in pairs(whitelist[class]) do
-        list[spellid] = true
-    end
+    list = KuiSpellList.AppendSpells(whitelist[class], list)
+    list = KuiSpellList.AppendSpells(cc[class], list)
 
     if not onlyClass then
-        KuiSpellList.AppendGlobalSpells(list)
+        -- also merge racial spells
+        list = KuiSpellList.AppendSpells(cc.Racial, list)
     end
 
     return list
 end
 
-KuiSpellList.GetImportantSpells = function(class)
-    -- get spell list and merge with KuiSpellListCustom if it is set
-    local list = KuiSpellList.GetDefaultSpells(class)
+KuiSpellList.GetMergedList = function(list)
+    -- get specified spell list and merge with KuiSpellListCustom if it is set
+    local list = KuiSpellList.GetDefaultSpells(list, list == 'Global')
 
     if KuiSpellListCustom then
-        for _,group in pairs({class,'GlobalSelf'}) do
+        local lists = list == 'Global' and {list} or {list, 'GlobalSelf'}
+        for _,group in pairs(lists) do
             if KuiSpellListCustom.Ignore and KuiSpellListCustom.Ignore[group]
             then
                 -- remove ignored spells
@@ -411,3 +444,5 @@ KuiSpellList.GetImportantSpells = function(class)
     return list
 end
 
+-- legacy
+KuiSpellList.GetImportantSpells = KuiSpellList.GetMergedList
