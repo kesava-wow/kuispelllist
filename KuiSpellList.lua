@@ -336,6 +336,8 @@ local auras = {
         HARMFUL = {
             [123725] = true, -- breath of fire dot
             [138130] = true, -- storm, earth and fire 1
+            [196608] = true, -- eye of the tiger
+            [115804] = true, -- mortal wounds
         },
         CONTROL = {
             [116095] = true, -- disable
