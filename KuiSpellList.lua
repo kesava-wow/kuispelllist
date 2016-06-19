@@ -182,6 +182,7 @@ local auras = {
         HARMFUL = {
             [26573] = true,  -- consecration
             [197277] = true, -- judgement
+            [183218] = true, -- hand of hindrance
         },
         CONTROL = {
             [853] = true,    -- hammer of justice
