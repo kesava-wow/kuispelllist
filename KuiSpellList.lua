@@ -330,6 +330,7 @@ local auras = {
             [116849] = true, -- life cocoon
             [119611] = true, -- renewing mist
             [124081] = true, -- zen sphere
+            [124682] = true, -- enveloping mist
         },
         HARMFUL = {
             [123725] = true, -- breath of fire dot
