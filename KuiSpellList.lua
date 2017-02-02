@@ -352,6 +352,7 @@ local auras = {
             [195452] = true, -- nightblade
             [192759] = true, -- kingsbane
             [196937] = true, -- ghostly strike
+            [200803] = true, -- agonizing poison
         },
         CONTROL = {
             [408] = true,    -- kidney shot
