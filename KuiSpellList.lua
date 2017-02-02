@@ -1,4 +1,4 @@
-local MAJOR, MINOR = 'KuiSpellList-1.0', 27
+local MAJOR, MINOR = 'KuiSpellList-1.0', 28
 local KuiSpellList = LibStub:NewLibrary(MAJOR, MINOR)
 local _
 
